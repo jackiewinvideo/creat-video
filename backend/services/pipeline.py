@@ -26,6 +26,7 @@ from backend.task_manager.manager import TaskManager
 from backend.task_manager.models import TaskState
 from backend.tool_adapters.ffmpeg_adapter import FFmpegAdapter
 from backend.tool_engine.engine import ToolExecutionEngine
+from backend.services.visual_generator import VisualGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +74,8 @@ class FilmProductionPipeline:
         self.editing_studio = editing_studio or EditingStudio(storage_root=self.storage_root, tool_engine=self.tool_engine)
         self.review_engine = review_engine or ReviewEngine()
         self.model_router = model_router
+        ffmpeg_adapter = self.tool_engine.registry.get_adapter("ffmpeg")
+        self.visual_generator = VisualGenerator(ffmpeg_adapter=ffmpeg_adapter if isinstance(ffmpeg_adapter, FFmpegAdapter) else None)
 
     def run_production(
         self,
@@ -169,32 +172,62 @@ class FilmProductionPipeline:
             # -------------------------------------------------------------
             # Stage 3: Production (Asset Generation for each Shot)
             # -------------------------------------------------------------
-            ffmpeg_adapter = self.tool_engine.registry.get_adapter("ffmpeg")
-            if not isinstance(ffmpeg_adapter, FFmpegAdapter):
-                ffmpeg_adapter = FFmpegAdapter()
-
             rendered_clip_paths = []
-            shot_colors = ["blue", "purple"]
+            shot_list = [shot1, shot2]
 
-            for idx, shot in enumerate([shot1, shot2]):
+            for idx, shot in enumerate(shot_list):
+                still_path = os.path.join(self.storage_root, "projects", project_id, f"shot_{idx+1}_still.png")
                 clip_path = os.path.join(self.storage_root, "projects", project_id, f"shot_{idx+1}.mp4")
-                gen_res = ffmpeg_adapter.generate_test_pattern(
-                    output_file=clip_path,
-                    duration=shot.estimated_duration,
-                    resolution="640x360",
-                    fps=24,
-                    color=shot_colors[idx % len(shot_colors)]
-                )
-                if not gen_res.success:
-                    raise RuntimeError(f"Failed to generate shot {idx+1}: {gen_res.error_message}")
 
-                # Ingest into AssetManager
+                # Compile rich prompt
+                compiled = self.storyboard_studio.compile_shot_prompts(
+                    shot=shot,
+                    character_bibles=self.character_studio.generate_project_character_bible(project_id),
+                    scene_bible=scene.to_scene_bible()
+                )
+
+                # 1. Generate rich visual still
+                self.visual_generator.generate_visual_still(
+                    prompt=compiled["image_prompt"],
+                    character_name=character_name,
+                    shot_number=idx + 1,
+                    shot_type=shot.shot_type,
+                    output_image_path=still_path,
+                    width=1280,
+                    height=720
+                )
+
+                # Ingest still into AssetManager
+                self.asset_manager.ingest_asset(
+                    source_file_path=still_path,
+                    project_id=project_id,
+                    asset_type=AssetType.IMAGE,
+                    source_type=AssetSourceType.AI_GENERATED,
+                    source_model_or_tool="visual_generator",
+                    associated_character_id=char.character_id,
+                    associated_scene_id=scene.scene_id,
+                    associated_shot_id=shot.shot_id
+                )
+
+                # 2. Animate still into moving video shot with camera movement
+                anim_res = self.visual_generator.animate_still_to_video(
+                    image_path=still_path,
+                    output_video_path=clip_path,
+                    duration=shot.estimated_duration,
+                    camera_movement=shot.camera_movement,
+                    resolution="1280x720",
+                    fps=24
+                )
+                if not anim_res.success:
+                    raise RuntimeError(f"Failed to animate shot {idx+1}: {anim_res.error_message}")
+
+                # Ingest animated video into AssetManager
                 ingested = self.asset_manager.ingest_asset(
                     source_file_path=clip_path,
                     project_id=project_id,
                     asset_type=AssetType.VIDEO,
                     source_type=AssetSourceType.AI_GENERATED,
-                    source_model_or_tool="ffmpeg",
+                    source_model_or_tool="visual_generator_ffmpeg",
                     associated_character_id=char.character_id,
                     associated_scene_id=scene.scene_id,
                     associated_shot_id=shot.shot_id
@@ -215,7 +248,7 @@ class FilmProductionPipeline:
             # -------------------------------------------------------------
             timeline = Timeline(
                 project_id=project_id,
-                resolution="640x360",
+                resolution="1280x720",
                 fps=24,
                 video_clips=[
                     TimelineClip(track_type=TimelineTrackType.VIDEO, file_path=rendered_clip_paths[0], duration=2.0),
@@ -251,7 +284,7 @@ class FilmProductionPipeline:
             review_report = self.review_engine.review_master_video(
                 video_path=master_asset.file_path,
                 expected_min_duration=3.5,
-                expected_resolution="640x360"
+                expected_resolution="1280x720"
             )
 
             self.task_manager.record_checkpoint(

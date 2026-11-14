@@ -93,6 +93,14 @@
             <textarea id="storyPrompt" rows="3" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm text-slate-200 focus:outline-none focus:border-cyan-500" placeholder="輸入您的電影主題概念...">A cyberpunk detective tracks a rogue artificial intelligence through a neon-lit rain-soaked alleyway in Neo-Metropolis.</textarea>
           </div>
 
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1 flex items-center justify-between">
+              <span>OpenAI API Key (選填)</span>
+              <span class="text-slate-500 text-[10px]">未填將自動調用本地高畫質賽博龐克視覺引擎</span>
+            </label>
+            <input type="password" id="apiKey" placeholder="sk-..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500 font-mono">
+          </div>
+
           <button id="produceBtn" onclick="startProduction()" class="w-full py-3 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-semibold rounded-lg shadow-lg glow-cyan transition flex items-center justify-center space-x-2">
             <span>🚀 執行端到端全自動電影製作</span>
           </button>
@@ -229,6 +237,7 @@
       const characterName = document.getElementById('characterName').value.trim() || 'Elena';
       const numShots = parseInt(document.getElementById('numShots').value) || 2;
       const storyPrompt = document.getElementById('storyPrompt').value.trim();
+      const apiKey = document.getElementById('apiKey').value.trim();
 
       const btn = document.getElementById('produceBtn');
       btn.disabled = true;
@@ -238,6 +247,11 @@
       logToTerm(`開始執行專案 [${projectId}] 電影管線任務...`, 'stage');
       logToTerm(`主角: ${characterName} | 鏡頭數量: ${numShots}`);
       logToTerm(`故事概念: "${storyPrompt}"`);
+      if (apiKey) {
+        logToTerm(`檢測到自訂 API Key，啟用雲端真實 AI 圖像/視訊生成模式！`, 'success');
+      } else {
+        logToTerm(`未輸入 API Key，已啟動本地多層次賽博龐克視覺繪圖與動態攝影鏡頭運算。`, 'info');
+      }
 
       try {
         logToTerm(`[Stage 1/6] Development - 開發故事與劇本大綱...`, 'stage');
@@ -250,6 +264,10 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             story_prompt: storyPrompt,
+            character_name: characterName,
+            num_shots: numShots,
+            api_key: apiKey || null
+          })
             character_name: characterName,
             num_shots: numShots
           })

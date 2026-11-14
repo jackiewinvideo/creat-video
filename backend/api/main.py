@@ -192,10 +192,13 @@ class PipelineRunPayload(BaseModel):
     story_prompt: str
     character_name: str = "Elena"
     num_shots: int = 2
+    api_key: Optional[str] = None
 
 
 @app.post("/api/projects/{project_id}/produce", response_model=FilmProductionResult)
 def run_film_pipeline(project_id: str, payload: PipelineRunPayload):
+    if payload.api_key:
+        os.environ["OPENAI_API_KEY"] = payload.api_key
     res = pipeline.run_production(
         project_id=project_id,
         story_prompt=payload.story_prompt,
