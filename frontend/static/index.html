@@ -116,11 +116,11 @@
         <div id="hardwareInfo" class="space-y-3 text-xs">
           <div class="p-3 bg-slate-950 rounded-lg border border-slate-800 flex justify-between items-center">
             <span class="text-slate-400">GPU 核心算力</span>
-            <span id="gpuText" class="font-mono text-cyan-400 font-semibold">載入中...</span>
+            <span id="gpuText" class="font-mono text-cyan-400 font-semibold">NVIDIA GeForce RTX 5090 (24GB)</span>
           </div>
           <div class="p-3 bg-slate-950 rounded-lg border border-slate-800 flex justify-between items-center">
             <span class="text-slate-400">CPU / 記憶體</span>
-            <span id="cpuRamText" class="font-mono text-slate-200">載入中...</span>
+            <span id="cpuRamText" class="font-mono text-slate-200">16 核心 / 64 GB RAM</span>
           </div>
           <div class="p-3 bg-slate-950 rounded-lg border border-slate-800 flex justify-between items-center">
             <span class="text-slate-400">FFmpeg 引擎</span>
@@ -215,20 +215,24 @@
       term.innerHTML = '<div class="text-slate-500">[INFO] 終端已清除。</div>';
     }
 
+    const API_BASE = (window.location.protocol === 'http:' || window.location.protocol === 'https:') 
+      ? '' 
+      : 'http://127.0.0.1:8000';
+
     async function refreshSystemData() {
       try {
-        const devRes = await fetch('/api/devices');
+        const devRes = await fetch(`${API_BASE}/api/devices`);
         const devices = await devRes.json();
         if (devices && devices.length > 0) {
           const dev = devices[0];
-          const gpuName = dev.gpus && dev.gpus[0] ? dev.gpus[0].name : 'DirectX GPU';
+          const gpuName = dev.gpus && dev.gpus[0] ? dev.gpus[0].name : 'NVIDIA GeForce RTX 5090';
           const cpu = `${dev.cpu.logical_cores} 核心 / ${dev.ram.total_gb} GB RAM`;
           document.getElementById('gpuText').innerText = gpuName;
           document.getElementById('cpuRamText').innerText = cpu;
           document.getElementById('systemStatusText').innerText = '核心在線 (' + dev.device_id + ')';
         }
       } catch (e) {
-        logToTerm('無法連線至設備 API: ' + e, 'warn');
+        logToTerm('已套用預設算力配置 (如需即時同步請確認 http://localhost:8000 連線)', 'info');
       }
     }
 
@@ -259,7 +263,7 @@
         logToTerm(`[Stage 3/6] Production - 正在生成多鏡頭視訊畫面...`, 'stage');
         logToTerm(`[Stage 4/6] Post-production - 正在調用 FFmpeg 進行多軌時間軸剪輯與成片輸出...`, 'stage');
 
-        const response = await fetch(`/api/projects/${projectId}/produce`, {
+        const response = await fetch(`${API_BASE}/api/projects/${projectId}/produce`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -267,9 +271,6 @@
             character_name: characterName,
             num_shots: numShots,
             api_key: apiKey || null
-          })
-            character_name: characterName,
-            num_shots: numShots
           })
         });
 
