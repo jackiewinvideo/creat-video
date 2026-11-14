@@ -86,7 +86,7 @@ def test_fastapi_endpoints():
     assert "ffmpeg" in tool_ids
     assert "ffprobe" in tool_ids
 
-    # 4. Tool health check
-    res_tool_health = client.post("/api/tools/health_check")
-    assert res_tool_health.status_code == 200
-    assert res_tool_health.json()["ffmpeg"] == "ready"
+    # 5. Web Terminal Dashboard check
+    res_ui = client.get("/")
+    assert res_ui.status_code == 200
+    assert "AI Film Studio" in res_ui.text

@@ -1,7 +1,11 @@
 import logging
+import os
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from backend.device_manager.manager import DeviceManager
@@ -73,6 +77,24 @@ pipeline = FilmProductionPipeline(
     editing_studio=editing_studio,
     review_engine=review_engine
 )
+
+
+# Ensure storage and static paths exist
+STORAGE_DIR = Path("./storage").resolve()
+STATIC_DIR = Path("./frontend/static").resolve()
+STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+STATIC_DIR.mkdir(parents=True, exist_ok=True)
+
+# Mount storage directory for direct video/media streaming in browser
+app.mount("/storage", StaticFiles(directory=str(STORAGE_DIR)), name="storage")
+
+# Root route serving the Interactive Film Studio Web Terminal
+@app.get("/", response_class=FileResponse)
+def get_terminal_dashboard():
+    index_file = STATIC_DIR / "index.html"
+    if index_file.exists():
+        return FileResponse(index_file)
+    raise HTTPException(status_code=404, detail="Terminal UI not found.")
 
 
 # --- Health & System ---

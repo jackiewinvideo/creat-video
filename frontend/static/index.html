@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Film Studio - 終端控制中心</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #0b0f19;
+      color: #e2e8f0;
+    }
+    .font-mono {
+      font-family: 'Fira Code', monospace;
+    }
+    .terminal-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+    .terminal-scroll::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    .terminal-scroll::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 3px;
+    }
+    .glow-cyan {
+      box-shadow: 0 0 15px rgba(6, 182, 212, 0.25);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 rounded-lg bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center font-bold text-white shadow-lg">
+        🎬
+      </div>
+      <div>
+        <h1 class="text-xl font-bold bg-gradient-to-r from-cyan-400 via-teal-300 to-indigo-400 bg-clip-text text-transparent">
+          AI Film Studio v4.0
+        </h1>
+        <p class="text-xs text-slate-400">完整 AI 電影製作、自動化剪輯與多模型協作平台</p>
+      </div>
+    </div>
+    <div class="flex items-center space-x-4">
+      <div id="statusBadge" class="flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span id="systemStatusText">系統連線中</span>
+      </div>
+      <button onclick="refreshSystemData()" class="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 transition">
+        🔄 重新整理
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Dashboard Container -->
+  <main class="flex-1 p-6 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- Left Column: Controls & Hardware (5 cols) -->
+    <div class="lg:col-span-5 space-y-6">
+
+      <!-- Movie Production Form -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-5 shadow-xl">
+        <h2 class="text-base font-semibold text-white flex items-center mb-4">
+          <span class="mr-2 text-cyan-400">⚡</span> 建立微電影任務
+        </h2>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">專案識別碼 (Project ID)</label>
+            <input type="text" id="projectId" value="demo_film_web" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500 font-mono">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">主角姓名 (Lead Character)</label>
+            <input type="text" id="characterName" value="Kaelen Cross" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">分鏡鏡頭數 (Shots Count)</label>
+            <select id="numShots" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500">
+              <option value="2" selected>2 個鏡頭 (快速示範 ~4秒)</option>
+              <option value="3">3 個鏡頭 (~6秒)</option>
+              <option value="4">4 個鏡頭 (~8秒)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">劇本故事概念 / 提示詞 (Story Prompt)</label>
+            <textarea id="storyPrompt" rows="3" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm text-slate-200 focus:outline-none focus:border-cyan-500" placeholder="輸入您的電影主題概念...">A cyberpunk detective tracks a rogue artificial intelligence through a neon-lit rain-soaked alleyway in Neo-Metropolis.</textarea>
+          </div>
+
+          <button id="produceBtn" onclick="startProduction()" class="w-full py-3 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-semibold rounded-lg shadow-lg glow-cyan transition flex items-center justify-center space-x-2">
+            <span>🚀 執行端到端全自動電影製作</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Hardware & Tools Monitor -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-5 shadow-xl">
+        <h2 class="text-base font-semibold text-white flex items-center mb-3">
+          <span class="mr-2 text-indigo-400">🖥️</span> 本地設備算力與影音工具
+        </h2>
+        
+        <div id="hardwareInfo" class="space-y-3 text-xs">
+          <div class="p-3 bg-slate-950 rounded-lg border border-slate-800 flex justify-between items-center">
+            <span class="text-slate-400">GPU 核心算力</span>
+            <span id="gpuText" class="font-mono text-cyan-400 font-semibold">載入中...</span>
+          </div>
+          <div class="p-3 bg-slate-950 rounded-lg border border-slate-800 flex justify-between items-center">
+            <span class="text-slate-400">CPU / 記憶體</span>
+            <span id="cpuRamText" class="font-mono text-slate-200">載入中...</span>
+          </div>
+          <div class="p-3 bg-slate-950 rounded-lg border border-slate-800 flex justify-between items-center">
+            <span class="text-slate-400">FFmpeg 引擎</span>
+            <span id="ffmpegText" class="font-mono text-emerald-400 font-semibold">Ready</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Column: Interactive Terminal & Video Player (7 cols) -->
+    <div class="lg:col-span-7 space-y-6">
+
+      <!-- Terminal Output Window -->
+      <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden shadow-2xl flex flex-col h-[340px]">
+        <div class="bg-slate-900 px-4 py-2.5 border-b border-slate-800 flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <span class="w-3 h-3 rounded-full bg-red-500/80 inline-block"></span>
+            <span class="w-3 h-3 rounded-full bg-yellow-500/80 inline-block"></span>
+            <span class="w-3 h-3 rounded-full bg-green-500/80 inline-block"></span>
+            <span class="text-xs font-mono text-slate-400 ml-2">studio-terminal@ai-film-studio:~$</span>
+          </div>
+          <button onclick="clearTerminal()" class="text-xs text-slate-500 hover:text-slate-300">清除紀錄</button>
+        </div>
+        <div id="terminalBody" class="flex-1 p-4 font-mono text-xs text-slate-300 overflow-y-auto terminal-scroll space-y-1">
+          <div class="text-slate-500">[INFO] AI Film Studio 終端控制系統已就緒。</div>
+          <div class="text-slate-500">[INFO] 請在左側設定故事並點選「執行端到端全自動電影製作」...</div>
+        </div>
+      </div>
+
+      <!-- Video Player & Quality Review Card -->
+      <div id="videoContainer" class="bg-slate-900/90 border border-slate-800 rounded-xl p-5 shadow-xl hidden">
+        <h2 class="text-base font-semibold text-white flex items-center justify-between mb-3">
+          <span class="flex items-center"><span class="mr-2 text-emerald-400">📽️</span> 最終成片預覽 (Master Video)</span>
+          <span id="reviewBadge" class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-mono">PASS 100分</span>
+        </h2>
+
+        <!-- HTML5 Video Player -->
+        <div class="aspect-video bg-black rounded-lg overflow-hidden border border-slate-800 mb-4">
+          <video id="masterVideoPlayer" controls class="w-full h-full object-contain"></video>
+        </div>
+
+        <!-- Video Meta & Review Items -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs mb-3">
+          <div class="bg-slate-950 p-2.5 rounded border border-slate-800">
+            <div class="text-slate-500">影片時長</div>
+            <div id="metaDuration" class="font-mono text-slate-200 font-semibold">-</div>
+          </div>
+          <div class="bg-slate-950 p-2.5 rounded border border-slate-800">
+            <div class="text-slate-500">影片解析度</div>
+            <div id="metaResolution" class="font-mono text-slate-200 font-semibold">-</div>
+          </div>
+          <div class="bg-slate-950 p-2.5 rounded border border-slate-800">
+            <div class="text-slate-500">幀率 FPS</div>
+            <div id="metaFps" class="font-mono text-slate-200 font-semibold">-</div>
+          </div>
+          <div class="bg-slate-950 p-2.5 rounded border border-slate-800">
+            <div class="text-slate-500">儲存資產 ID</div>
+            <div id="metaAssetId" class="font-mono text-slate-200 truncate">-</div>
+          </div>
+        </div>
+
+        <div id="reviewDetails" class="space-y-1.5 text-xs text-slate-400 bg-slate-950 p-3 rounded border border-slate-800">
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <script>
+    const term = document.getElementById('terminalBody');
+
+    function logToTerm(msg, type = 'info') {
+      const now = new Date().toLocaleTimeString();
+      const div = document.createElement('div');
+      
+      let colorClass = 'text-slate-300';
+      let tag = '[INFO]';
+      if (type === 'success') { colorClass = 'text-emerald-400 font-semibold'; tag = '[SUCCESS]'; }
+      if (type === 'warn') { colorClass = 'text-amber-400'; tag = '[WARN]'; }
+      if (type === 'error') { colorClass = 'text-red-400 font-semibold'; tag = '[ERROR]'; }
+      if (type === 'stage') { colorClass = 'text-cyan-400 font-bold'; tag = '[STAGE]'; }
+
+      div.className = colorClass;
+      div.innerText = `${now} ${tag} ${msg}`;
+      term.appendChild(div);
+      term.scrollTop = term.scrollHeight;
+    }
+
+    function clearTerminal() {
+      term.innerHTML = '<div class="text-slate-500">[INFO] 終端已清除。</div>';
+    }
+
+    async function refreshSystemData() {
+      try {
+        const devRes = await fetch('/api/devices');
+        const devices = await devRes.json();
+        if (devices && devices.length > 0) {
+          const dev = devices[0];
+          const gpuName = dev.gpus && dev.gpus[0] ? dev.gpus[0].name : 'DirectX GPU';
+          const cpu = `${dev.cpu.logical_cores} 核心 / ${dev.ram.total_gb} GB RAM`;
+          document.getElementById('gpuText').innerText = gpuName;
+          document.getElementById('cpuRamText').innerText = cpu;
+          document.getElementById('systemStatusText').innerText = '核心在線 (' + dev.device_id + ')';
+        }
+      } catch (e) {
+        logToTerm('無法連線至設備 API: ' + e, 'warn');
+      }
+    }
+
+    async function startProduction() {
+      const projectId = document.getElementById('projectId').value.trim() || 'demo_proj';
+      const characterName = document.getElementById('characterName').value.trim() || 'Elena';
+      const numShots = parseInt(document.getElementById('numShots').value) || 2;
+      const storyPrompt = document.getElementById('storyPrompt').value.trim();
+
+      const btn = document.getElementById('produceBtn');
+      btn.disabled = true;
+      btn.classList.add('opacity-50', 'cursor-not-allowed');
+      btn.innerHTML = '<span>⏳ 電影製作運算中...</span>';
+
+      logToTerm(`開始執行專案 [${projectId}] 電影管線任務...`, 'stage');
+      logToTerm(`主角: ${characterName} | 鏡頭數量: ${numShots}`);
+      logToTerm(`故事概念: "${storyPrompt}"`);
+
+      try {
+        logToTerm(`[Stage 1/6] Development - 開發故事與劇本大綱...`, 'stage');
+        logToTerm(`[Stage 2/6] Pre-production - 建立 Character Bible、Scene Bible 與分鏡...`, 'stage');
+        logToTerm(`[Stage 3/6] Production - 正在生成多鏡頭視訊畫面...`, 'stage');
+        logToTerm(`[Stage 4/6] Post-production - 正在調用 FFmpeg 進行多軌時間軸剪輯與成片輸出...`, 'stage');
+
+        const response = await fetch(`/api/projects/${projectId}/produce`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            story_prompt: storyPrompt,
+            character_name: characterName,
+            num_shots: numShots
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          logToTerm(`[Stage 5/6] Review - 影片質量審核完成: ${data.review_report.overall_status}`, 'success');
+          logToTerm(`[Stage 6/6] Delivery - 成片已儲存於素材庫！`, 'success');
+          logToTerm(`總時長: ${data.total_runtime_seconds}秒 | Checkpoints: ${data.checkpoints_count} 個`, 'info');
+
+          // Display video container
+          const container = document.getElementById('videoContainer');
+          container.classList.remove('hidden');
+
+          // Format storage url
+          // master_video_path is absolute or relative
+          const relativePath = data.master_video_path.replace(/\\/g, '/');
+          const storageIndex = relativePath.indexOf('/storage/');
+          const webUrl = storageIndex !== -1 ? relativePath.substring(storageIndex) : '/storage/projects/' + projectId + '/assets/final_deliverable/' + (data.master_video_path.split('\\').pop() || data.master_video_path.split('/').pop());
+          
+          const player = document.getElementById('masterVideoPlayer');
+          player.src = webUrl;
+          player.load();
+
+          document.getElementById('metaDuration').innerText = data.total_runtime_seconds.toFixed(2) + 's';
+          document.getElementById('metaResolution').innerText = (data.review_report.media_summary && data.review_report.media_summary.video) ? `${data.review_report.media_summary.video.width}x${data.review_report.media_summary.video.height}` : '640x360';
+          document.getElementById('metaFps').innerText = (data.review_report.media_summary && data.review_report.media_summary.video) ? data.review_report.media_summary.video.fps : '24';
+          document.getElementById('metaAssetId').innerText = data.master_asset_id;
+
+          const badge = document.getElementById('reviewBadge');
+          badge.innerText = `${data.review_report.overall_status} ${(data.review_report.score * 100).toFixed(0)}分`;
+
+          const details = document.getElementById('reviewDetails');
+          details.innerHTML = data.review_report.checks.map(c => `
+            <div class="flex items-center space-x-2">
+              <span>${c.passed ? '✅' : '❌'}</span>
+              <span class="text-slate-300 font-mono">${c.check_name}:</span>
+              <span>${c.details}</span>
+            </div>
+          `).join('');
+
+          logToTerm(`成片播放器已載入: ${webUrl}`, 'success');
+
+        } else {
+          logToTerm(`製作失敗: ${data.detail || data.error_message}`, 'error');
+        }
+
+      } catch (err) {
+        logToTerm(`請求異常: ${err.message}`, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        btn.innerHTML = '<span>🚀 執行端到端全自動電影製作</span>';
+      }
+    }
+
+    // Auto initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      refreshSystemData();
+    });
+  </script>
+</body>
+</html>
